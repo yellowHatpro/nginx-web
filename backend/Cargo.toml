@@ -1,0 +1,53 @@
+[package]
+name = "nginx-manager-backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web framework
+axum = "0.7.4"
+tower = "0.4.13"
+tower-http = { version = "0.5.1", features = ["cors", "trace"] }
+
+# Async runtime
+tokio = { version = "1.36.0", features = ["full"] }
+
+# Serialization/Deserialization
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.114"
+
+# Error handling
+anyhow = "1.0.80"
+thiserror = "1.0.57"
+
+# Logging
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+
+# Configuration
+dotenv = "0.15.0"
+config = "0.14.0"
+dirs = "5.0.1"
+
+# Nginx parsing and management
+nginx-config = "0.13.2"
+nginx-parser = { path = "./nginx-parser" }
+regex = "1.10.3"
+chrono = { version = "0.4.34", features = ["serde"] }
+
+# WebSockets for real-time updates
+tokio-tungstenite = "0.21.0"
+futures = "0.3.30"
+
+# File watching
+notify = "6.1.1"
+
+# CLI utilities
+clap = { version = "4.5.2", features = ["derive"] }
+uuid = { version = "1.15.1", features = ["v4", "serde"] }
+reqwest = { version = "0.11", features = ["blocking"] }
+
+[dev-dependencies]
+tempfile = "3.10.0"
+mockall = "0.12.1"
+tokio-test = "0.4.3"
