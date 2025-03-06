@@ -1,5 +1,7 @@
 # Nginx Manager
 
+![Nginx Manager](./assets/load-balancer.png)
+
 A comprehensive Nginx management UI with traffic monitoring, load balancer configuration, and config file management.
 
 ## Features
