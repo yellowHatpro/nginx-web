@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useEffect } from "react";
 import {
   File,
   Save,
@@ -10,28 +10,38 @@ import {
   Play,
   Info,
 } from "lucide-react";
-import { configApi, healthApi } from "../utils/api";
-import { NginxConfig } from "../types";
+import { configApi } from "../utils/api";
 import NginxStatus from "./NginxStatus";
-import ConfigEditor from "./ConfigEditor";
 import CreateConfigModal from "./CreateConfigModal";
+import { useConfigStore } from "../store/configStore";
 
 function ConfigManager() {
-  const [configs, setConfigs] = useState<NginxConfig[]>([]);
-  const [selectedConfig, setSelectedConfig] = useState<NginxConfig | null>(
-    null
-  );
-  const [editedContent, setEditedContent] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deploying, setDeploying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [nginxReady, setNginxReady] = useState<boolean | null>(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [showSymlinkInfo, setShowSymlinkInfo] = useState(true);
+  const {
+    configs,
+    selectedConfig,
+    editedContent,
+    loading,
+    saving,
+    deleting,
+    deploying,
+    error,
+    successMessage,
+    nginxReady,
+    isCreateModalOpen,
+    isCreating,
+    showSymlinkInfo,
+    checkNginxStatus,
+    fetchConfigs,
+    saveConfig,
+    createConfig,
+    deleteConfig,
+    deployConfig,
+    setSelectedConfig,
+    setEditedContent,
+    setCreateModalOpen,
+    setShowSymlinkInfo,
+    setError,
+  } = useConfigStore();
 
   useEffect(() => {
     checkNginxStatus();
@@ -43,163 +53,12 @@ function ConfigManager() {
     }
   }, [nginxReady]);
 
-  const checkNginxStatus = async () => {
-    try {
-      const response = await healthApi.check();
-      setNginxReady(response.nginx_installed);
-    } catch (err) {
-      console.error("Failed to check Nginx status:", err);
-      setError("Failed to check Nginx status. Please try again later.");
-      setNginxReady(false);
-    }
-  };
-
-  const fetchConfigs = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const fetchedConfigs = await configApi.list();
-      setConfigs(fetchedConfigs);
-      if (fetchedConfigs.length > 0) {
-        const config = await configApi.get(fetchedConfigs[0].id);
-        setSelectedConfig(config);
-        setEditedContent(config.content);
-      } else {
-        setSelectedConfig(null);
-        setEditedContent("");
-      }
-    } catch (err) {
-      console.error("Failed to fetch configurations:", err);
-      setError("Failed to fetch configurations. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!selectedConfig) return;
-
-    setSaving(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      await configApi.update(selectedConfig.id, { content: editedContent });
-      setSuccessMessage("Configuration saved successfully!");
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      console.error("Failed to save configuration:", err);
-      setError(
-        "Failed to save configuration. Please check syntax and try again."
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleCreateConfig = () => {
-    setIsCreateModalOpen(true);
+    setCreateModalOpen(true);
   };
 
   const handleCreateConfigSubmit = async (name: string, content: string) => {
-    setIsCreating(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      const newConfig = await configApi.create(name, content);
-      setSuccessMessage("Configuration created successfully!");
-
-      // Refresh the config list
-      await fetchConfigs();
-
-      // Select the newly created config
-      setSelectedConfig(newConfig);
-      setEditedContent(newConfig.content);
-
-      // Close the modal
-      setIsCreateModalOpen(false);
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      console.error("Failed to create configuration:", err);
-      setError("Failed to create configuration. Please try again.");
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleDeleteConfig = async () => {
-    if (!selectedConfig) return;
-
-    // Confirm deletion
-    if (
-      !window.confirm(`Are you sure you want to delete ${selectedConfig.name}?`)
-    ) {
-      return;
-    }
-
-    setDeleting(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      await configApi.delete(selectedConfig.id);
-      setSuccessMessage("Configuration deleted successfully!");
-
-      // Refresh the config list
-      await fetchConfigs();
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      console.error("Failed to delete configuration:", err);
-      setError("Failed to delete configuration. Please try again.");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const handleDeployConfig = async () => {
-    if (!selectedConfig) return;
-
-    if (
-      !window.confirm(
-        "Are you sure you want to deploy this configuration to the Nginx server? This will reload Nginx."
-      )
-    ) {
-      return;
-    }
-
-    setDeploying(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      // First save any changes
-      await configApi.update(selectedConfig.id, { content: editedContent });
-
-      // Then deploy
-      const result = await configApi.deploy({ config_id: selectedConfig.id });
-
-      if (result.success) {
-        setSuccessMessage(
-          `Configuration deployed successfully! ${result.message || ""}`
-        );
-      } else {
-        setError(
-          `Failed to deploy configuration: ${result.message || "Unknown error"}`
-        );
-      }
-    } catch (err) {
-      console.error("Failed to deploy configuration:", err);
-      setError("Failed to deploy configuration. Please try again later.");
-    } finally {
-      setDeploying(false);
-    }
+    await createConfig(name, content);
   };
 
   // If Nginx status is still being checked
@@ -240,13 +99,6 @@ function ConfigManager() {
               but Nginx needs access to them. After creating a configuration,
               you'll need to create a symlink with this command:
             </p>
-            <pre className="bg-blue-100 p-2 rounded mt-2 text-sm overflow-x-auto">
-              sudo bash -c 'mkdir -p /usr/local/etc/nginx && [ -e
-              /usr/local/etc/nginx/your-config.conf ] && rm
-              /usr/local/etc/nginx/your-config.conf ; ln -s
-              ~/.nginx-web/configs/your-config.conf
-              /usr/local/etc/nginx/your-config.conf'
-            </pre>
             <p className="text-sm mt-2">
               Replace{" "}
               <code className="bg-blue-100 px-1 rounded">your-config.conf</code>{" "}
@@ -283,7 +135,7 @@ function ConfigManager() {
             New Config
           </button>
           <button
-            onClick={handleSave}
+            onClick={saveConfig}
             disabled={saving || loading || !selectedConfig}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
@@ -291,7 +143,7 @@ function ConfigManager() {
             Save Changes
           </button>
           <button
-            onClick={handleDeployConfig}
+            onClick={deployConfig}
             disabled={deploying || saving || loading || !selectedConfig}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
           >
@@ -423,7 +275,7 @@ function ConfigManager() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={handleDeployConfig}
+                      onClick={deployConfig}
                       disabled={deploying}
                       className="inline-flex items-center px-3 py-1 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     >
@@ -431,7 +283,7 @@ function ConfigManager() {
                       Deploy
                     </button>
                     <button
-                      onClick={handleDeleteConfig}
+                      onClick={deleteConfig}
                       disabled={deleting}
                       className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                     >
@@ -464,7 +316,7 @@ function ConfigManager() {
       {/* Create Config Modal */}
       <CreateConfigModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => setCreateModalOpen(false)}
         onSubmit={handleCreateConfigSubmit}
         isLoading={isCreating}
       />

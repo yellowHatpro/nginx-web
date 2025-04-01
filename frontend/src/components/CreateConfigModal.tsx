@@ -62,9 +62,7 @@ const CreateConfigModal: React.FC<CreateConfigModalProps> = ({
                 After creating this configuration, you'll need to create a
                 symlink for Nginx to access it:
               </p>
-              <pre className="bg-blue-100 p-2 rounded mt-2 text-xs overflow-x-auto">
-                {`sudo bash -c 'mkdir -p /usr/local/etc/nginx && [ -e /usr/local/etc/nginx/${configName} ] && rm /usr/local/etc/nginx/${configName} ; ln -s ~/.nginx-web/configs/${configName} /usr/local/etc/nginx/${configName}'`}
-              </pre>
+              <pre className="bg-blue-100 p-2 rounded mt-2 text-xs overflow-x-auto"></pre>
             </div>
           </div>
 
