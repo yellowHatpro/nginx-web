@@ -49,7 +49,7 @@ impl AppConfig {
         info!("Nginx log dir: {}", nginx_log_dir);
         info!("Nginx binary: {}", nginx_binary);
         info!("API key required: {}", api_key_required);
-        info!("API key: {}", api_key.unwrap_or_else(|| "None".to_string()));
+        info!("API key: {}", api_key.clone().unwrap_or_else(|| "None".to_string()));
 
         Ok(Self {
             host,
