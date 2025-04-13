@@ -1,11 +1,11 @@
 from fastapi import FastAPI
-from core.nginx_manager import NginxManager
+import uvicorn
 
-def init_app():
-    nginx_manager = NginxManager()
-    app = FastAPI()
-    
+from routes import nginx_routes
 
+app = FastAPI()
+
+app.include_router(nginx_routes.nginx_router)
 
 if __name__ == "__main__":
-    init_app()
+    uvicorn.run(app, host="0.0.0.0", port=8000)
