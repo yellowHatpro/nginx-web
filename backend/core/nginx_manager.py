@@ -53,11 +53,21 @@ class NginxManager:
             if file.endswith("nginx.conf"):
                 shutil.copy(os.path.join(self.nginx_path, file), os.path.join(self.nginx_path, file + ".backup"))
     
+
+    def _regenerate_nginx_conf_tree(self):
+        # TODO: update the nginx_conf_tree from the main_directives
+        pass
     
-    def save_nginx_conf(self, new_conf_data: dict, file_name: str = "nginx.conf"):
-        # dict to json
-        new_conf_json = json.dumps(new_conf_data, indent=4)
-        updated_nginx_conf = crossplane.build(new_conf_json)
+    def save_nginx_conf(self, file_name: str = "nginx.conf"):
+        # create a temp file and write new_conf_data dict data as json in it
+
+        # TODO: update the nginx_conf_tree from the main_directives
+        self._regenerate_nginx_conf_tree()
+
+        temp_file_path = os.path.join(self.nginx_path, file_name + ".temp")
+        with open(temp_file_path, "w") as f:
+            json.dump(self.nginx_conf_tree, f, indent=4)
+        updated_nginx_conf = crossplane.build(temp_file_path)
         # write to file
         with open(os.path.join(self.nginx_path, file_name), "w") as f:
             f.write(updated_nginx_conf)
@@ -66,7 +76,7 @@ class NginxManager:
         file_path = os.path.join(self.nginx_path, file_name)
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File {file_name} not found in {self.nginx_path}")
-        self.nginx_conf_tree = crossplane.parse(file_path)
+        self.nginx_conf_tree = crossplane.parse(file_path, single=True)
     
     def get_nginx_conf_tree(self):
         return self.nginx_conf_tree
