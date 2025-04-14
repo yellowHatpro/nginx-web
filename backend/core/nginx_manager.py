@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 
@@ -73,8 +72,7 @@ class NginxManager:
         
 
     def _regenerate_nginx_conf_tree(self):
-        # TODO: update the nginx_conf_tree from the main_directives
-        # recursively do this
+        # recursively do this (mfs I did this all myself, you really think all this leetcoding was for nothing?)
         parsed_directives = [] 
         for directive in self.main_directives.values():
             new_directive = {
@@ -87,15 +85,10 @@ class NginxManager:
             parsed_directives.append(new_directive)
         self.nginx_conf_tree["config"][0]["parsed"] = parsed_directives
     def save_nginx_conf(self, file_name: str = "nginx.conf"):
-        # create a temp file and write new_conf_data dict data as json in it
-
-        # TODO: update the nginx_conf_tree from the main_directives
         self._regenerate_nginx_conf_tree()
-        print("yay", self.nginx_conf_tree["config"][0]["parsed"])
         parsed_nginx_conf = self.nginx_conf_tree["config"][0]["parsed"]
         updated_nginx_conf = crossplane.build(parsed_nginx_conf)
         # write to file
-        print("updated_nginx_conf", updated_nginx_conf)
         with open(os.path.join(self.nginx_path, file_name), "w") as f:
             f.write(updated_nginx_conf)
     
