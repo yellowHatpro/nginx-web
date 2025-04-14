@@ -79,15 +79,12 @@ class NginxManager:
         
         parsed_blocks = []
         for item in block_data:
-            directive_class = NginxDirective.get_directive_class(item["directive"])
-            if directive_class:
+            recursive_directive = NginxDirective(name=item["directive"], arg=item.get("args", []))
+            if recursive_directive:
                 # Recursively parse nested blocks
                 nested_blocks = self._parse_directive_block(item.get("block", []))
-                directive_instance = directive_class(
-                    arg=item.get("args", []),
-                    blocks=nested_blocks
-                )
-                parsed_blocks.append(directive_instance)
+                recursive_directive.set_blocks(nested_blocks)
+                parsed_blocks.append(recursive_directive)
         return parsed_blocks
 
     def _init_main_directives(self):
@@ -97,14 +94,11 @@ class NginxManager:
             raise Exception("No directives found in nginx.conf")
         directives = {}
         for directive in nginx_conf_directives["parsed"]:
-            directive_class = NginxDirective.get_directive_class(directive["directive"])
+            blocks = directive.get("block", [])
+            recursive_blocks = self._parse_directive_block(blocks)
+            directive_class = NginxDirective(name=directive["directive"], arg=directive.get("args", []), blocks=recursive_blocks)
             if directive_class:
-                # Parse nested blocks recursively
-                parsed_blocks = self._parse_directive_block(directive.get("block", []))
-                directives[directive["directive"]] = directive_class(
-                    arg=directive.get("args", []),
-                    blocks=parsed_blocks
-                )
+                directives[directive["directive"]] = directive_class
         self.main_directives = directives
         return directives
     
