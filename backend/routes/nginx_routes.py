@@ -10,8 +10,8 @@ def get_nginx_conf(nginx_manager : NginxManager = Depends(get_nginx_manager)):
     return nginx_manager.get_nginx_conf_tree()
 
 @nginx_router.post("/conf")
-def update_nginx_conf(conf: dict, nginx_manager : NginxManager = Depends(get_nginx_manager)):
-    nginx_manager.save_nginx_conf(conf)
+def update_nginx_conf(nginx_manager : NginxManager = Depends(get_nginx_manager)):
+    nginx_manager.save_nginx_conf()
     return {"message": "Nginx configuration updated"}
 
 @nginx_router.get("/directives")

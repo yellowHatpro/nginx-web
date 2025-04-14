@@ -52,23 +52,50 @@ class NginxManager:
         for file in self.nginx_conf_files:
             if file.endswith("nginx.conf"):
                 shutil.copy(os.path.join(self.nginx_path, file), os.path.join(self.nginx_path, file + ".backup"))
-    
+        
+
+    def _recursively_get_directives(self, block: dict) -> list:
+        if not block or len(block) == 0:
+            return None
+        parsed_block = []
+        for inner_block in block:
+            new_directive = {
+                "directive": inner_block.directive,
+                "args": inner_block.args,
+                "block": self._recursively_get_directives(inner_block.block)
+            }
+            if new_directive["block"] is None or len(new_directive["block"]) == 0:
+                new_directive.pop("block")
+            parsed_block.append(new_directive)
+        if len(parsed_block) == 0:
+            return None
+        return parsed_block
+        
 
     def _regenerate_nginx_conf_tree(self):
         # TODO: update the nginx_conf_tree from the main_directives
-        pass
-    
+        # recursively do this
+        parsed_directives = [] 
+        for directive in self.main_directives.values():
+            new_directive = {
+                "directive": directive.directive,
+                "args": directive.args,
+                "block": self._recursively_get_directives(directive.block)
+            }
+            if new_directive["block"] is None or len(new_directive["block"]) == 0:
+                new_directive.pop("block")
+            parsed_directives.append(new_directive)
+        self.nginx_conf_tree["config"][0]["parsed"] = parsed_directives
     def save_nginx_conf(self, file_name: str = "nginx.conf"):
         # create a temp file and write new_conf_data dict data as json in it
 
         # TODO: update the nginx_conf_tree from the main_directives
         self._regenerate_nginx_conf_tree()
-
-        temp_file_path = os.path.join(self.nginx_path, file_name + ".temp")
-        with open(temp_file_path, "w") as f:
-            json.dump(self.nginx_conf_tree, f, indent=4)
-        updated_nginx_conf = crossplane.build(temp_file_path)
+        print("yay", self.nginx_conf_tree["config"][0]["parsed"])
+        parsed_nginx_conf = self.nginx_conf_tree["config"][0]["parsed"]
+        updated_nginx_conf = crossplane.build(parsed_nginx_conf)
         # write to file
+        print("updated_nginx_conf", updated_nginx_conf)
         with open(os.path.join(self.nginx_path, file_name), "w") as f:
             f.write(updated_nginx_conf)
     
@@ -82,20 +109,20 @@ class NginxManager:
         return self.nginx_conf_tree
     
     def _parse_directive_block(self, block_data):
-        """Recursively parse directive blocks and their nested directives."""
+        """Recursively parse directive block and their nested directives."""
         # base case
         if not block_data:
             return []
         
-        parsed_blocks = []
+        parsed_block = []
         for item in block_data:
-            recursive_directive = NginxDirective(name=item["directive"], arg=item.get("args", []))
+            recursive_directive = NginxDirective(item["directive"], item.get("args", []))
             if recursive_directive:
-                # Recursively parse nested blocks
-                nested_blocks = self._parse_directive_block(item.get("block", []))
-                recursive_directive.set_blocks(nested_blocks)
-                parsed_blocks.append(recursive_directive)
-        return parsed_blocks
+                # Recursively parse nested block
+                nested_block = self._parse_directive_block(item.get("block", []))
+                recursive_directive.set_block(nested_block)
+                parsed_block.append(recursive_directive)
+        return parsed_block
 
     def _init_main_directives(self):
         nginx_conf:list = list(self.nginx_conf_tree["config"])
@@ -104,9 +131,9 @@ class NginxManager:
             raise Exception("No directives found in nginx.conf")
         directives = {}
         for directive in nginx_conf_directives["parsed"]:
-            blocks = directive.get("block", [])
-            recursive_blocks = self._parse_directive_block(blocks)
-            directive_class = NginxDirective(name=directive["directive"], arg=directive.get("args", []), blocks=recursive_blocks)
+            block = directive.get("block", [])
+            recursive_block = self._parse_directive_block(block)
+            directive_class = NginxDirective(directive["directive"], directive.get("args", []), recursive_block)
             if directive_class:
                 directives[directive["directive"]] = directive_class
         self.main_directives = directives
